@@ -1,0 +1,1144 @@
+// This is your Prisma schema file.
+// Learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ─── Enums ────────────────────────────────────────────────────────────────────
+
+enum Role {
+  superAdmin
+  companyAdmin
+  hrManager
+  manager
+  employee
+}
+
+enum Theme {
+  light
+  dark
+}
+
+enum CompanySize {
+  SIZE_1_10    @map("1-10")
+  SIZE_11_50   @map("11-50")
+  SIZE_51_200  @map("51-200")
+  SIZE_201_500 @map("201-500")
+  SIZE_500_PLUS @map("500+")
+}
+
+enum SubscriptionPlan {
+  free
+  basic
+  professional
+  enterprise
+}
+
+enum Gender {
+  Male
+  Female
+  Other
+  PreferNotToSay @map("Prefer not to say")
+}
+
+enum EmploymentType {
+  FullTime  @map("Full-time")
+  PartTime  @map("Part-time")
+  Contract
+  Intern
+  Freelance
+  Remote
+}
+
+enum EmployeeStatus {
+  Active
+  Inactive
+  OnLeave    @map("On Leave")
+  Terminated
+  Resigned
+}
+
+enum AttendanceStatus {
+  Present
+  Absent
+  Late
+  HalfDay   @map("Half Day")
+  OnLeave   @map("On Leave")
+  Holiday
+  Weekend
+}
+
+enum CheckInMethod {
+  manual
+  qr
+  web
+}
+
+enum LeaveType {
+  Sick
+  Casual
+  Annual
+  Emergency
+  Maternity
+  Paternity
+  Unpaid
+}
+
+enum LeaveStatus {
+  Pending
+  Approved
+  Rejected
+  Cancelled
+}
+
+enum HalfDayPeriod {
+  Morning
+  Afternoon
+}
+
+enum NotificationType {
+  leave_approved
+  leave_rejected
+  leave_applied
+  task_assigned
+  task_updated
+  interview_scheduled
+  announcement
+  payroll_generated
+  review_submitted
+  attendance_marked
+  document_uploaded
+  general
+}
+
+enum NotificationPriority {
+  low
+  medium
+  high
+}
+
+enum MessageType {
+  direct
+  group
+  announcement
+}
+
+enum MessageContentType {
+  text
+  image
+  file
+  audio
+}
+
+enum AnnouncementType {
+  General
+  Policy
+  Event
+  Holiday
+  Emergency
+  HR
+}
+
+enum AnnouncementPriority {
+  Low
+  Medium
+  High
+  Urgent
+}
+
+enum TaskStatus {
+  Todo
+  InProgress  @map("In Progress")
+  Review
+  Completed
+}
+
+enum TaskPriority {
+  Low
+  Medium
+  High
+  Urgent
+}
+
+enum ProjectStatus {
+  Planning
+  Active
+  OnHold     @map("On Hold")
+  Completed
+  Cancelled
+}
+
+enum ProjectPriority {
+  Low
+  Medium
+  High
+  Critical
+}
+
+enum ReviewPeriodType {
+  Monthly
+  Quarterly
+  SemiAnnual @map("Semi-Annual")
+  Annual
+}
+
+enum ReviewRating {
+  Excellent
+  Good
+  Average
+  BelowAverage @map("Below Average")
+  Poor
+}
+
+enum ReviewStatus {
+  Draft
+  Submitted
+  Acknowledged
+}
+
+enum DocumentType {
+  Resume
+  Certificate
+  Contract
+  ID
+  SalarySlip  @map("Salary Slip")
+  OfferLetter @map("Offer Letter")
+  NOC
+  Other
+}
+
+enum PayrollStatus {
+  Draft
+  Processed
+  Paid
+  Cancelled
+}
+
+enum PaymentMethod {
+  BankTransfer @map("Bank Transfer")
+  Cash
+  Cheque
+  Online
+}
+
+enum JobStatus {
+  Open
+  Closed
+  Draft
+  Paused
+}
+
+enum CandidateStatus {
+  Applied
+  Screening
+  Interview
+  Selected
+  Rejected
+  Hired
+  Withdrawn
+}
+
+enum CandidateSource {
+  Direct
+  LinkedIn
+  Indeed
+  Referral
+  Agency
+  Other
+}
+
+enum InterviewType {
+  Phone
+  Video
+  InPerson   @map("In-person")
+  Technical
+  HR
+  Final
+}
+
+enum InterviewStatus {
+  Scheduled
+  Completed
+  Cancelled
+  NoShow     @map("No Show")
+  Rescheduled
+}
+
+enum InterviewResult {
+  Pass
+  Fail
+  Hold
+  Pending
+}
+
+enum EducationLevel {
+  HighSchool  @map("High School")
+  Diploma
+  Bachelor
+  Master
+  PhD
+  Other
+}
+
+enum AuditStatus {
+  success
+  failure
+}
+
+// ─── Security Enums ───────────────────────────────────────────────────────────
+
+enum KeyAlgorithm {
+  RSA
+  ECC
+}
+
+enum KeyPurpose {
+  encryption
+  signature
+  keyExchange
+  authentication
+}
+
+enum KeyStatus {
+  active
+  rotated
+  revoked
+  expired
+}
+
+enum SessionStatus {
+  active
+  expired
+  revoked
+}
+
+// ─── Models ───────────────────────────────────────────────────────────────────
+
+model User {
+  id                   Int       @id @default(autoincrement())
+  name                 String
+  email                String    @unique
+  password             String
+  role                 Role      @default(employee)
+  companyId            Int?
+  employeeProfileId    Int?      @unique
+  profileImage         String    @default("")
+  phone                String?
+  isActive             Boolean   @default(true)
+  isEmailVerified      Boolean   @default(false)
+  refreshToken         String?
+  resetPasswordToken   String?
+  resetPasswordExpire  DateTime?
+  lastLogin            DateTime?
+  loginAttempts        Int       @default(0)
+  lockUntil            DateTime?
+  // Preferences stored as JSON
+  preferences          Json      @default("{\"theme\":\"light\",\"notifications\":true,\"language\":\"en\"}")
+  createdAt            DateTime  @default(now())
+  updatedAt            DateTime  @updatedAt
+
+  // ─── Security Fields ────────────────────────────────────────────────────────
+  encrypted_name        String?   @db.Text  // RSA-encrypted display name
+  encrypted_email       String?   @db.Text  // RSA-encrypted email
+  encrypted_phone       String?   @db.Text  // RSA-encrypted phone
+  email_hash            String?   @unique   // SHA-256 hash of email for lookup
+  password_salt         String?             // Explicit salt stored separately
+  mfa_enabled           Boolean   @default(false)
+  mfa_secret            String?             // TOTP secret (base32)
+  ecc_public_key        String?   @db.Text  // User's ECC public key for verification
+  security_version      Int       @default(1) // Track security schema version
+
+  // Relations
+  company              Company?  @relation("CompanyUsers", fields: [companyId], references: [id])
+  employeeProfile      Employee? @relation("UserEmployee", fields: [employeeProfileId], references: [id])
+  adminOfCompany       Company?  @relation("CompanyAdmin")
+  leaveApprovals       Leave[]   @relation("LeaveApprovedBy")
+  leaveRejections      Leave[]   @relation("LeaveRejectedBy")
+  payrollGenerated     Payroll[] @relation("PayrollGeneratedBy")
+  payrollPaid          Payroll[] @relation("PayrollPaidBy")
+  sentMessages         Message[] @relation("MessageSender")
+  receivedMessages     Message[] @relation("MessageReceiver")
+  notifications        Notification[]
+  announcements        Announcement[]
+  auditLogs            AuditLog[]
+  reviews              Review[]  @relation("ReviewCreator")
+  documents            Document[]
+  tasks                Task[]    @relation("TaskAssignedBy")
+  interviews           InterviewInterviewer[]
+  interviewsScheduled  Interview[] @relation("InterviewScheduledBy")
+  leaves               Leave[]   @relation("LeaveUser")
+  postedJobs           Job[]     @relation("JobPostedBy")
+  // Security relations
+  sessions             Session[]
+  authFactor           AuthenticationFactor?
+  cryptoKeys           CryptographicKey[]
+  posts                Post[]   @relation("PostAuthor")
+
+  @@map("users")
+}
+
+model Company {
+  id          Int      @id @default(autoincrement())
+  name        String
+  slug        String   @unique
+  logo        String   @default("")
+  email       String
+  phone       String?
+  website     String?
+  // address as JSON: {street, city, state, country, zipCode}
+  address     Json?
+  industry    String?
+  size        CompanySize @default(SIZE_1_10)
+  founded     Int?
+  adminId     Int?     @unique
+  isActive    Boolean  @default(true)
+  // subscription as JSON: {plan, expiresAt, maxEmployees}
+  subscription Json    @default("{\"plan\":\"free\",\"maxEmployees\":10}")
+  // settings as JSON: {workingHours, workingDays, leaveBalance, timezone, currency}
+  settings    Json     @default("{\"workingHours\":{\"start\":\"09:00\",\"end\":\"17:00\"},\"workingDays\":[\"Monday\",\"Tuesday\",\"Wednesday\",\"Thursday\",\"Friday\"],\"leaveBalance\":{\"sick\":12,\"casual\":12,\"annual\":18,\"emergency\":3},\"timezone\":\"UTC\",\"currency\":\"USD\"}")
+  description String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  admin       User?    @relation("CompanyAdmin", fields: [adminId], references: [id])
+  users       User[]   @relation("CompanyUsers")
+  employees   Employee[]
+  departments Department[]
+  attendance  Attendance[]
+  leaves      Leave[]
+  payrolls    Payroll[]
+  tasks       Task[]
+  projects    Project[]
+  jobs        Job[]
+  candidates  Candidate[]
+  resumes     Resume[]
+  interviews  Interview[]
+  reviews     Review[]
+  documents   Document[]
+  messages    Message[]
+  notifications Notification[]
+  announcements Announcement[]
+  auditLogs   AuditLog[]
+  cryptoKeys  CryptographicKey[]
+  posts       Post[]   @relation("CompanyPosts")
+
+  @@map("companies")
+}
+
+model Department {
+  id               Int      @id @default(autoincrement())
+  name             String
+  companyId        Int
+  code             String?
+  description      String?
+  managerId        Int?
+  parentDeptId     Int?
+  budget           Float    @default(0)
+  location         String?
+  isActive         Boolean  @default(true)
+  color            String   @default("#6366f1")
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  // Relations
+  company          Company    @relation(fields: [companyId], references: [id])
+  manager          Employee?  @relation("DeptManager", fields: [managerId], references: [id])
+  parentDept       Department? @relation("DeptHierarchy", fields: [parentDeptId], references: [id])
+  childDepts       Department[] @relation("DeptHierarchy")
+  employees        Employee[]  @relation("EmployeeDept")
+  jobs             Job[]
+  targetedAnnouncements AnnouncementDepartment[]
+
+  @@unique([companyId, name])
+  @@map("departments")
+}
+
+model Employee {
+  id              Int      @id @default(autoincrement())
+  companyId       Int
+  employeeCode    String   // e.g. EMP-001
+  name            String
+  email           String
+  phone           String?
+  profileImage    String   @default("")
+  gender          Gender?
+  dateOfBirth     DateTime?
+  // address as JSON
+  address         Json?
+  departmentId    Int?
+  designation     String?
+  managerId       Int?
+  joiningDate     DateTime
+  employmentType  EmploymentType @default(FullTime)
+  status          EmployeeStatus @default(Active)
+  // salary as JSON: {basic, currency}
+  salary          Json     @default("{\"basic\":0,\"currency\":\"USD\"}")
+  // bankDetails as JSON
+  bankDetails     Json?
+  // emergencyContact as JSON
+  emergencyContact Json?
+  // skills as JSON array: [{name, level}]
+  skills          Json     @default("[]")
+  // education as JSON array
+  education       Json     @default("[]")
+  // experience as JSON array
+  experience      Json     @default("[]")
+  // leaveBalance as JSON
+  leaveBalance    Json     @default("{\"sick\":12,\"casual\":12,\"annual\":18,\"emergency\":3}")
+  notes           String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  // ─── Security Fields ────────────────────────────────────────────────────────
+  mac_value       String?  @db.Text  // HMAC-SHA256 integrity tag
+  integrity_hash  String?            // SHA-256 hash of record for tamper detection
+
+  // Relations
+  company         Company    @relation(fields: [companyId], references: [id])
+  department      Department? @relation("EmployeeDept", fields: [departmentId], references: [id])
+  manager         Employee?  @relation("EmployeeManager", fields: [managerId], references: [id])
+  subordinates    Employee[] @relation("EmployeeManager")
+  managedDepts    Department[] @relation("DeptManager")
+  user            User?      @relation("UserEmployee")
+  attendance      Attendance[]
+  leaves          Leave[]
+  payrolls        Payroll[]
+  assignedTasks   Task[]     @relation("TaskAssignee")
+  managedProjects Project[]  @relation("ProjectManager")
+  projectMemberships ProjectMember[]
+  reviews         Review[]
+  documents       Document[]
+
+  @@unique([companyId, employeeCode])
+  @@map("employees")
+}
+
+model Attendance {
+  id                Int      @id @default(autoincrement())
+  employeeId        Int
+  userId            Int
+  companyId         Int
+  date              DateTime @db.Date
+  checkIn           DateTime?
+  checkOut          DateTime?
+  workingHours      Int      @default(0) // in minutes
+  status            AttendanceStatus @default(Present)
+  isLate            Boolean  @default(false)
+  isEarlyLeave      Boolean  @default(false)
+  lateMinutes       Int      @default(0)
+  earlyLeaveMinutes Int      @default(0)
+  checkInMethod     CheckInMethod @default(web)
+  qrToken           String?
+  // location as JSON: {checkIn: {lat, lng, address}, checkOut: {...}}
+  location          Json?
+  notes             String?
+  approvedById      Int?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  // Relations
+  employee          Employee @relation(fields: [employeeId], references: [id])
+  company           Company  @relation(fields: [companyId], references: [id])
+
+  @@unique([companyId, employeeId, date])
+  @@map("attendance")
+}
+
+model Leave {
+  id                 Int       @id @default(autoincrement())
+  employeeId         Int
+  userId             Int
+  companyId          Int
+  type               LeaveType
+  startDate          DateTime
+  endDate            DateTime
+  totalDays          Float
+  reason             String
+  status             LeaveStatus @default(Pending)
+  approvedById       Int?
+  approvedAt         DateTime?
+  rejectedById       Int?
+  rejectedAt         DateTime?
+  // comments as JSON array: [{userId, text, createdAt}]
+  comments           Json      @default("[]")
+  // attachments as JSON array of strings
+  attachments        Json      @default("[]")
+  isHalfDay          Boolean   @default(false)
+  halfDayPeriod      HalfDayPeriod?
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+
+  // ─── Security Fields ────────────────────────────────────────────────────────
+  approval_signature  String?  @db.Text  // ECC digital signature of approval action
+  mac_value           String?  @db.Text  // HMAC-SHA256 integrity tag
+
+  // Relations
+  employee      Employee  @relation(fields: [employeeId], references: [id])
+  user          User      @relation("LeaveUser", fields: [userId], references: [id])
+  company       Company   @relation(fields: [companyId], references: [id])
+  approvedBy    User?     @relation("LeaveApprovedBy", fields: [approvedById], references: [id])
+  rejectedBy    User?     @relation("LeaveRejectedBy", fields: [rejectedById], references: [id])
+
+  @@map("leaves")
+}
+
+model Payroll {
+  id                 Int      @id @default(autoincrement())
+  employeeId         Int
+  companyId          Int
+  month              Int
+  year               Int
+  basicSalary        Float    @default(0)
+  // allowances as JSON array: [{name, amount}]
+  allowances         Json     @default("[]")
+  // bonuses as JSON array: [{name, amount, reason}]
+  bonuses            Json     @default("[]")
+  // deductions as JSON array: [{name, amount, reason}]
+  deductions         Json     @default("[]")
+  tax                Float    @default(0)
+  grossSalary        Float    @default(0)
+  totalAllowances    Float    @default(0)
+  totalBonuses       Float    @default(0)
+  totalDeductions    Float    @default(0)
+  netSalary          Float    @default(0)
+  currency           String   @default("USD")
+  status             PayrollStatus @default(Draft)
+  paymentDate        DateTime?
+  paymentMethod      PaymentMethod @default(BankTransfer)
+  generatedById      Int?
+  paidById           Int?
+  workingDays        Int?
+  presentDays        Int?
+  leaveDays          Int?
+  absentDays         Int?
+  overtime           Float    @default(0)
+  overtimeRate       Float    @default(0)
+  notes              String?
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  // ─── Security Fields ────────────────────────────────────────────────────────
+  approval_signature  String?  @db.Text  // ECC digital signature of payroll approval
+  mac_value           String?  @db.Text  // HMAC-SHA256 integrity tag
+  integrity_hash      String?            // SHA-256 hash of payroll record
+
+  // Relations
+  employee        Employee @relation(fields: [employeeId], references: [id])
+  company         Company  @relation(fields: [companyId], references: [id])
+  generatedBy     User?    @relation("PayrollGeneratedBy", fields: [generatedById], references: [id])
+  paidBy          User?    @relation("PayrollPaidBy", fields: [paidById], references: [id])
+
+  @@unique([companyId, employeeId, month, year])
+  @@map("payrolls")
+}
+
+model Notification {
+  id        Int      @id @default(autoincrement())
+  userId    Int
+  companyId Int?
+  type      NotificationType
+  title     String
+  message   String
+  isRead    Boolean  @default(false)
+  readAt    DateTime?
+  link      String?
+  // metadata as JSON
+  metadata  Json?
+  priority  NotificationPriority @default(medium)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  user      User     @relation(fields: [userId], references: [id])
+  company   Company? @relation(fields: [companyId], references: [id])
+
+  @@map("notifications")
+}
+
+model Message {
+  id          Int      @id @default(autoincrement())
+  companyId   Int
+  senderId    Int
+  receiverId  Int?
+  roomId      String?
+  type        MessageType @default(direct)
+  content     String
+  messageType MessageContentType @default(text)
+  fileUrl     String?
+  fileName    String?
+  isRead      Boolean  @default(false)
+  // readBy as JSON array: [{userId, readAt}]
+  readBy      Json     @default("[]")
+  isDeleted   Boolean  @default(false)
+  deletedAt   DateTime?
+  replyToId   Int?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  company     Company  @relation(fields: [companyId], references: [id])
+  sender      User     @relation("MessageSender", fields: [senderId], references: [id])
+  receiver    User?    @relation("MessageReceiver", fields: [receiverId], references: [id])
+  replyTo     Message? @relation("MessageReply", fields: [replyToId], references: [id])
+  replies     Message[] @relation("MessageReply")
+
+  @@map("messages")
+}
+
+model Announcement {
+  id          Int      @id @default(autoincrement())
+  companyId   Int
+  title       String
+  content     String
+  type        AnnouncementType @default(General)
+  priority    AnnouncementPriority @default(Medium)
+  // targetRoles as JSON array of strings
+  targetRoles Json     @default("[]")
+  createdById Int
+  expiresAt   DateTime?
+  isPinned    Boolean  @default(false)
+  // attachments as JSON array of strings
+  attachments Json     @default("[]")
+  // readBy as JSON array: [{userId, readAt}]
+  readBy      Json     @default("[]")
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  company         Company  @relation(fields: [companyId], references: [id])
+  createdBy       User     @relation(fields: [createdById], references: [id])
+  targetDepartments AnnouncementDepartment[]
+
+  @@map("announcements")
+}
+
+model AnnouncementDepartment {
+  announcementId Int
+  departmentId   Int
+
+  announcement   Announcement @relation(fields: [announcementId], references: [id])
+  department     Department   @relation(fields: [departmentId], references: [id])
+
+  @@id([announcementId, departmentId])
+  @@map("announcement_departments")
+}
+
+model Project {
+  id          Int      @id @default(autoincrement())
+  companyId   Int
+  name        String
+  description String?
+  managerId   Int?
+  status      ProjectStatus @default(Planning)
+  priority    ProjectPriority @default(Medium)
+  startDate   DateTime?
+  endDate     DateTime?
+  budget      Float?
+  progress    Int      @default(0)
+  // tags as JSON array
+  tags        Json     @default("[]")
+  color       String   @default("#6366f1")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  company     Company  @relation(fields: [companyId], references: [id])
+  manager     Employee? @relation("ProjectManager", fields: [managerId], references: [id])
+  members     ProjectMember[]
+  tasks       Task[]
+
+  @@map("projects")
+}
+
+model ProjectMember {
+  projectId  Int
+  employeeId Int
+
+  project    Project  @relation(fields: [projectId], references: [id])
+  employee   Employee @relation(fields: [employeeId], references: [id])
+
+  @@id([projectId, employeeId])
+  @@map("project_members")
+}
+
+model Task {
+  id              Int      @id @default(autoincrement())
+  projectId       Int?
+  companyId       Int
+  title           String
+  description     String?
+  assigneeId      Int?
+  assignedById    Int?
+  status          TaskStatus @default(Todo)
+  priority        TaskPriority @default(Medium)
+  deadline        DateTime?
+  completedAt     DateTime?
+  estimatedHours  Float?
+  actualHours     Float?
+  // tags as JSON array
+  tags            Json     @default("[]")
+  // attachments as JSON array
+  attachments     Json     @default("[]")
+  // comments as JSON array: [{userId, text, createdAt}]
+  comments        Json     @default("[]")
+  // subtasks as JSON array: [{title, completed, completedAt}]
+  subtasks        Json     @default("[]")
+  position        Int      @default(0)
+  // checklist as JSON array: [{item, done}]
+  checklist       Json     @default("[]")
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  // Relations
+  project         Project?  @relation(fields: [projectId], references: [id])
+  company         Company   @relation(fields: [companyId], references: [id])
+  assignee        Employee? @relation("TaskAssignee", fields: [assigneeId], references: [id])
+  assignedBy      User?     @relation("TaskAssignedBy", fields: [assignedById], references: [id])
+
+  @@map("tasks")
+}
+
+model Review {
+  id                   Int      @id @default(autoincrement())
+  employeeId           Int
+  reviewerId           Int
+  companyId            Int
+  period               String
+  periodType           ReviewPeriodType @default(Quarterly)
+  // criteria as JSON array: [{name, weight, score, comments}]
+  criteria             Json     @default("[]")
+  overallScore         Float?
+  rating               ReviewRating?
+  // strengths as JSON array
+  strengths            Json     @default("[]")
+  // improvements as JSON array
+  improvements         Json     @default("[]")
+  // goals as JSON array: [{goal, deadline, status}]
+  goals                Json     @default("[]")
+  comments             String?
+  employeeAcknowledged Boolean  @default(false)
+  acknowledgedAt       DateTime?
+  status               ReviewStatus @default(Draft)
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+
+  // Relations
+  employee    Employee @relation(fields: [employeeId], references: [id])
+  reviewer    User     @relation("ReviewCreator", fields: [reviewerId], references: [id])
+  company     Company  @relation(fields: [companyId], references: [id])
+
+  @@map("reviews")
+}
+
+model Document {
+  id               Int      @id @default(autoincrement())
+  employeeId       Int?
+  companyId        Int
+  uploadedById     Int
+  name             String
+  type             DocumentType @default(Other)
+  fileUrl          String
+  fileName         String
+  fileSize         Int?
+  mimeType         String?
+  isPublic         Boolean  @default(false)
+  // tags as JSON array
+  tags             Json     @default("[]")
+  expiresAt        DateTime?
+  description      String?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  // ─── Security Fields ────────────────────────────────────────────────────────
+  mac_value        String?  @db.Text  // HMAC-SHA256 integrity tag
+  integrity_hash   String?            // SHA-256 hash for tamper detection
+  is_encrypted     Boolean  @default(false)
+
+  // Relations
+  employee    Employee? @relation(fields: [employeeId], references: [id])
+  company     Company   @relation(fields: [companyId], references: [id])
+  uploadedBy  User      @relation(fields: [uploadedById], references: [id])
+
+  @@map("documents")
+}
+
+model Job {
+  id               Int      @id @default(autoincrement())
+  companyId        Int
+  title            String
+  departmentId     Int?
+  description      String
+  // requirements as JSON array
+  requirements     Json     @default("[]")
+  // responsibilities as JSON array
+  responsibilities Json     @default("[]")
+  // requiredSkills as JSON array
+  requiredSkills   Json     @default("[]")
+  // preferredSkills as JSON array
+  preferredSkills  Json     @default("[]")
+  // experience as JSON: {min, max, unit}
+  experience       Json?
+  education        String?
+  employmentType   EmploymentType @default(FullTime)
+  location         String?
+  // salary as JSON: {min, max, currency, isNegotiable}
+  salary           Json?
+  status           JobStatus @default(Draft)
+  postedById       Int?
+  closingDate      DateTime?
+  totalOpenings    Int      @default(1)
+  applicationCount Int      @default(0)
+  isRemote         Boolean  @default(false)
+  // tags as JSON array
+  tags             Json     @default("[]")
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  // Relations
+  company      Company     @relation(fields: [companyId], references: [id])
+  department   Department? @relation(fields: [departmentId], references: [id])
+  postedBy     User?       @relation("JobPostedBy", fields: [postedById], references: [id])
+  candidates   Candidate[]
+  interviews   Interview[]
+  resumes      Resume[]
+
+  @@map("jobs")
+}
+
+// User relation on Job for postedBy (needs explicit relation name since User has multiple)
+// Using a separate explicit relation
+model Candidate {
+  id              Int      @id @default(autoincrement())
+  jobId           Int
+  companyId       Int
+  name            String
+  email           String
+  phone           String?
+  resumeUrl       String?
+  resumeText      String?
+  coverLetter     String?
+  linkedIn        String?
+  portfolio       String?
+  status          CandidateStatus @default(Applied)
+  source          CandidateSource @default(Direct)
+  matchScore      Float    @default(0)
+  // skillsMatched as JSON array
+  skillsMatched   Json     @default("[]")
+  // skillsMissing as JSON array
+  skillsMissing   Json     @default("[]")
+  rating          Float?
+  // notes as JSON array: [{text, addedById, createdAt}]
+  notes           Json     @default("[]")
+  // pipelineHistory as JSON array: [{status, changedById, changedAt, notes}]
+  pipelineHistory Json     @default("[]")
+  expectedSalary  Float?
+  noticePeriod    String?
+  currentCompany  String?
+  experience      Float?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  // Relations
+  job         Job       @relation(fields: [jobId], references: [id])
+  company     Company   @relation(fields: [companyId], references: [id])
+  interviews  Interview[]
+  resume      Resume?
+
+  @@map("candidates")
+}
+
+model Interview {
+  id            Int      @id @default(autoincrement())
+  candidateId   Int
+  jobId         Int
+  companyId     Int
+  round         Int      @default(1)
+  type          InterviewType @default(Phone)
+  scheduledAt   DateTime
+  duration      Int      @default(60)
+  meetLink      String?
+  location      String?
+  status        InterviewStatus @default(Scheduled)
+  feedback      String?
+  rating        Float?
+  result        InterviewResult @default(Pending)
+  // criteria as JSON array: [{name, score, comments}]
+  criteria      Json     @default("[]")
+  notes         String?
+  scheduledById Int?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  // Relations
+  candidate   Candidate @relation(fields: [candidateId], references: [id])
+  job         Job       @relation(fields: [jobId], references: [id])
+  company     Company   @relation(fields: [companyId], references: [id])
+  scheduledBy User?     @relation("InterviewScheduledBy", fields: [scheduledById], references: [id])
+  interviewers InterviewInterviewer[]
+
+  @@map("interviews")
+}
+
+model InterviewInterviewer {
+  interviewId Int
+  userId      Int
+
+  interview   Interview @relation(fields: [interviewId], references: [id])
+  user        User      @relation(fields: [userId], references: [id])
+
+  @@id([interviewId, userId])
+  @@map("interview_interviewers")
+}
+
+model Resume {
+  id                  Int      @id @default(autoincrement())
+  candidateId         Int      @unique
+  jobId               Int
+  companyId           Int
+  fileUrl             String?
+  rawText             String?
+  // detectedSkills as JSON array
+  detectedSkills      Json     @default("[]")
+  detectedExperience  Float    @default(0)
+  detectedEducation   String?
+  educationLevel      EducationLevel?
+  skillMatchScore     Float    @default(0)
+  experienceScore     Float    @default(0)
+  educationScore      Float    @default(0)
+  overallScore        Float    @default(0)
+  rank                Int?
+  isScreened          Boolean  @default(false)
+  screenedAt          DateTime?
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  // Relations
+  candidate  Candidate @relation(fields: [candidateId], references: [id])
+  job        Job       @relation(fields: [jobId], references: [id])
+  company    Company   @relation(fields: [companyId], references: [id])
+
+  @@map("resumes")
+}
+
+model AuditLog {
+  id             Int         @id @default(autoincrement())
+  userId         Int?
+  companyId      Int?
+  action         String
+  entity         String
+  entityId       Int?
+  description    String?
+  // changes as JSON: {before, after}
+  changes        Json?
+  ipAddress      String?
+  userAgent      String?
+  status         AuditStatus @default(success)
+  // metadata as JSON
+  metadata       Json?
+  createdAt      DateTime    @default(now())
+  updatedAt      DateTime    @updatedAt
+
+  // ─── Security Fields (Hash-Chain Audit Trail) ────────────────────────────────
+  previous_hash  String?     @db.Text  // Hash of previous audit log entry
+  current_hash   String?     @db.Text  // SHA-256 hash of this entry
+  mac_value      String?     @db.Text  // HMAC-SHA256 integrity tag
+  log_signature  String?     @db.Text  // ECC digital signature
+
+  // Relations
+  user        User?    @relation(fields: [userId], references: [id])
+  company     Company? @relation(fields: [companyId], references: [id])
+
+  @@map("audit_logs")
+}
+
+// ─── Security Models ──────────────────────────────────────────────────────────
+
+model CryptographicKey {
+  id                    Int        @id @default(autoincrement())
+  userId                Int?
+  companyId             Int?
+  algorithm             KeyAlgorithm
+  purpose               KeyPurpose
+  public_key            String     @db.Text
+  protected_private_key String     @db.Text  // Private key (stored as JSON, optionally protected)
+  key_id                String     @unique   // UUID key identifier
+  created_at            DateTime   @default(now())
+  rotation_date         DateTime?            // When this key should be rotated
+  expires_at            DateTime?            // Key expiration date
+  status                KeyStatus  @default(active)
+  metadata              Json?                // Additional key metadata
+
+  // Relations
+  user    User?    @relation(fields: [userId], references: [id])
+  company Company? @relation(fields: [companyId], references: [id])
+
+  @@map("cryptographic_keys")
+}
+
+model Session {
+  id                  Int           @id @default(autoincrement())
+  userId              Int
+  refresh_token_hash  String        @db.Text  // SHA-256 hash of refresh token
+  device              String?                  // Device identifier
+  ip_address          String?                  // Client IP
+  user_agent          String?       @db.Text   // Browser/client user agent
+  status              SessionStatus @default(active)
+  created_at          DateTime      @default(now())
+  expires_at          DateTime                 // Token expiration
+  last_active         DateTime      @default(now())
+
+  // Relations
+  user    User     @relation(fields: [userId], references: [id])
+
+  @@map("sessions")
+}
+
+model AuthenticationFactor {
+  id           Int      @id @default(autoincrement())
+  userId       Int      @unique
+  type         String   @default("TOTP")     // TOTP, SMS, EMAIL
+  secret       String                         // TOTP shared secret (base32)
+  is_verified  Boolean  @default(false)      // Whether 2FA setup is confirmed
+  backup_codes Json     @default("[]")       // One-time backup codes (hashed)
+  created_at   DateTime @default(now())
+  updated_at   DateTime @updatedAt
+
+  // Relations
+  user    User     @relation(fields: [userId], references: [id])
+
+  @@map("authentication_factors")
+}
+
+// ─── Post Model (ECC ElGamal Encrypted) ──────────────────────────────────────
+
+model Post {
+  id                Int      @id @default(autoincrement())
+  authorId          Int
+  companyId         Int?
+
+  // ─── ECC ElGamal Encrypted Fields (Req 10: second asymmetric algorithm) ───
+  encrypted_title   String   @db.Text  // ECC ElGamal encrypted post title
+  encrypted_content String   @db.Text  // ECC ElGamal encrypted post content
+
+  // ─── Integrity & Authenticity ────────────────────────────────────────────
+  mac_value         String?  @db.Text  // HMAC-SHA256 integrity tag
+  integrity_hash    String?            // SHA-256 hash of plaintext content
+  ecc_signature     String?  @db.Text  // ECDSA signature of content hash
+
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  // Relations
+  author  User     @relation("PostAuthor",   fields: [authorId],  references: [id])
+  company Company? @relation("CompanyPosts", fields: [companyId], references: [id])
+
+  @@map("posts")
+}
