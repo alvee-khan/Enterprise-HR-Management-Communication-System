@@ -13,6 +13,7 @@ uploads/
 *.log
 *.sqlite
 *.sqlite3
+backend/verify_all_cse447_requirements.js
 
 # OS and editor files
 .DS_Store
